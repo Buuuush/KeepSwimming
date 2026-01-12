@@ -2,11 +2,16 @@ package net.solyze.keepswimming.client;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import lombok.Getter;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.impl.screenhandler.client.ClientNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.MutableText;
@@ -17,6 +22,7 @@ import net.solyze.keepswimming.client.util.KeepSwimmingOptionData;
 import net.solyze.keepswimming.client.keybind.KeyHandler;
 import net.solyze.keepswimming.client.keybind.handler.MasterToggleKeyHandler;
 import net.solyze.keepswimming.config.KeepSwimmingConfig;
+import net.solyze.keepswimming.networking.HandshakePacket;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +30,8 @@ import java.util.List;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.*;
 
 public class KeepSwimmingClient implements ClientModInitializer {
+
+    public static KeepSwimmingClient INSTANCE;
 
     private static final List<KeepSwimmingOptionData> OPTION_DATA = List.of(
             new KeepSwimmingOptionData("always", "Always", "Always keep swimming.",
@@ -95,11 +103,28 @@ public class KeepSwimmingClient implements ClientModInitializer {
     );
 
     private final List<KeyHandler> keyBindHandlers = new ArrayList<>();
+    @Getter private boolean serverCompatible;
 
     @Override
     public void onInitializeClient() {
+        INSTANCE = this;
         this.registerKeyBindHandler(new MasterToggleKeyHandler());
         ClientTickEvents.END_CLIENT_TICK.register(this::onEndClientTick);
+
+        ClientPlayNetworking.registerGlobalReceiver(HandshakePacket.PACKET_ID, ((packet, context) -> {
+            this.serverCompatible = true;
+            KeepSwimming.LOGGER.info("Handshake packet received! Now server compatible.");
+        }));
+
+        ClientPlayConnectionEvents.JOIN.register(((handler, packetSender, client) -> {
+            this.serverCompatible = false;
+            KeepSwimming.LOGGER.info("Scheduling handshake packet...");
+
+            client.execute(() -> {
+                KeepSwimming.LOGGER.info("Sending handshake packet...");
+                ClientPlayNetworking.send(new HandshakePacket());
+            });
+        }));
 
         LiteralArgumentBuilder<FabricClientCommandSource> command = literal("keepswimming").executes(ctx -> {
             if (checkMultiplayer(ctx)) return 1;
@@ -114,6 +139,12 @@ public class KeepSwimmingClient implements ClientModInitializer {
                 return 1;
             }));
         }
+
+        command = command.then(literal("handshakestatus").executes(ctx -> {
+            ctx.getSource().getPlayer().sendMessage(Text.literal(String.valueOf(this.serverCompatible))
+                    .withColor(this.serverCompatible ? 0x55FF55 : 0xFF5555), false);
+            return 1;
+        }));
 
         LiteralArgumentBuilder<FabricClientCommandSource> finalCommand = command;
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(finalCommand));
@@ -145,7 +176,6 @@ public class KeepSwimmingClient implements ClientModInitializer {
         String joined = String.join(" | ", OPTION_DATA.stream().map(KeepSwimmingOptionData::key).toList());
         player.sendMessage(Text.literal("Usage: /keepswimming <" + joined + ">").formatted(Formatting.RED), false);
         player.sendMessage(Text.empty(), false);
-        return;
     }
 
     private MutableText getOptionText(KeepSwimmingOptionData option) {

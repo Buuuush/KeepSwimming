@@ -3,9 +3,14 @@ package net.solyze.keepswimming;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.util.Identifier;
 import net.solyze.keepswimming.config.ConfigInfo;
 import net.solyze.keepswimming.config.KeepSwimmingConfig;
+import net.solyze.keepswimming.networking.HandshakePacket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +42,15 @@ public class KeepSwimming implements ModInitializer {
         INSTANCE = this;
         this.loadConfigs();
         this.saveConfigs();
+
+        PayloadTypeRegistry.playC2S().register(HandshakePacket.PACKET_ID, HandshakePacket.PACKET_CODEC);
+        PayloadTypeRegistry.playS2C().register(HandshakePacket.PACKET_ID, HandshakePacket.PACKET_CODEC);
+
+        ServerPlayNetworking.registerGlobalReceiver(HandshakePacket.PACKET_ID, ((packet, context) -> {
+            KeepSwimming.LOGGER.info("Handshake packet received! Sending response...");
+            context.responseSender().sendPacket(new HandshakePacket());
+        }));
+
         LOGGER.info("{} has been initialized.", MOD_DISPLAY);
     }
 

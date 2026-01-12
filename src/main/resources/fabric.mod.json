@@ -8,7 +8,7 @@
   "contact": {},
   "license": "GPL-3.0",
   "icon": "assets/keepswimming/icon.png",
-  "environment": "client",
+  "environment": "*",
   "entrypoints": {
     "client": [
       "net.solyze.keepswimming.client.KeepSwimmingClient"

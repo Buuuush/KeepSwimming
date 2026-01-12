@@ -18,6 +18,7 @@ import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.text.TranslatableTextContent;
 import net.solyze.keepswimming.KeepSwimming;
+import net.solyze.keepswimming.client.KeepSwimmingClient;
 import net.solyze.keepswimming.config.KeepSwimmingConfig;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -115,7 +116,8 @@ public class ClientPlayerEntityMixin {
     private void tickMovement(CallbackInfo ci) {
         ClientPlayerEntity player = (ClientPlayerEntity) (Object) this;
         MinecraftClient client = MinecraftClient.getInstance();
-        if (!client.isInSingleplayer() || !player.isTouchingWater()) return;
+        if (!player.isTouchingWater()) return;
+        if (!client.isInSingleplayer() && !KeepSwimmingClient.INSTANCE.isServerCompatible()) return;
 
         Optional<Object> optional = KeepSwimming.INSTANCE.getConfig(KeepSwimmingConfig.class);
         if (optional.isEmpty()) return;
