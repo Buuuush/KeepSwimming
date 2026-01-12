@@ -8,8 +8,8 @@
 - Opening Inventories
 - And more!
 
-### ⚠️ Disclaimer: Only works in Singleplayer ([Intended](https://modrinth.com/legal/rules))
-Due to this technically being a cheat, in order to comply with Modrinth's rules, the mod will not be available on multiplayer servers.
+### ⚠️ Disclaimer: Singleplayer & servers w/ the mod installed ([Intended](https://modrinth.com/legal/rules))
+Due to this technically being a cheat, in order to comply with Modrinth's rules, the mod will not be available on multiplayer servers without the mod installed.
 
 ### ✏️ Quick Notes:
 - There's a hotkey in your keybind settings. This can be used to toggle the mod.
